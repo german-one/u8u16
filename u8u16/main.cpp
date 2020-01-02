@@ -1,5 +1,7 @@
 #include <iostream>
 #include <memory>
+#include <chrono>
+#include <random>
 #include "u8u16.hpp"
 #include "basic_duration.h"
 
@@ -47,11 +49,15 @@ int main()
         }
     }
 
+    std::default_random_engine generator{  gsl::narrow_cast<unsigned>(std::chrono::system_clock::now().time_since_epoch().count()) };
+    std::uniform_int_distribution<size_t> distribution{};
     NTSTATUS status{};
     HRESULT hRes{};
     int length{};
     ULONG written{};
     double duration{};
+    char randElem8{};
+    wchar_t randElem16{};
 
     std::cout << "*** UTF-16 To UTF-8 ***\n"
               << std::endl;
@@ -60,23 +66,29 @@ int main()
     std::unique_ptr<char[]> u8Buffer{ std::make_unique<char[]>(u16Length * 3) };
     length = WideCharToMultiByte(65001, 0, testU16.c_str(), gsl::narrow_cast<int>(u16Length), u8Buffer.get(), gsl::narrow_cast<int>(u16Length) * 3, nullptr, nullptr);
     duration = GetBasicDuration();
+    distribution = std::uniform_int_distribution<size_t>{0, gsl::narrow_cast<size_t>(length)};
+    [[gsl::suppress(26446)]] randElem8 = u8Buffer[distribution(generator)];
     u8Buffer.reset();
-    std::cout << "WideCharToMultiByte"
+    std::cout << "WideCharToMultiByte" << "\n random character " << gsl::narrow_cast<int>(gsl::narrow_cast<unsigned char>(randElem8))
               << "\n length " << length << "\n elapsed " << duration << "\n~~~~~" << std::endl;
 
     GetBasicDuration();
     std::unique_ptr<char[]> u8Buffer2{ std::make_unique<char[]>(u16Length * 3) };
     status = p_RtlUnicodeToUTF8N(u8Buffer2.get(), gsl::narrow_cast<ULONG>(u16Length) * 3, &written, testU16.c_str(), gsl::narrow_cast<ULONG>(testU16.length() * 2));
     duration = GetBasicDuration();
+    distribution = std::uniform_int_distribution<size_t>{0, gsl::narrow_cast<size_t>(written)};
+    [[gsl::suppress(26446)]] randElem8 = u8Buffer2[distribution(generator)];
     u8Buffer2.reset();
-    std::cout << "RtlUnicodeToUTF8N"
+    std::cout << "RtlUnicodeToUTF8N" << "\n random character " << gsl::narrow_cast<int>(gsl::narrow_cast<unsigned char>(randElem8))
               << "\n NTSTATUS " << status << "\n length " << written << "\n elapsed " << duration << "\n~~~~~" << std::endl;
 
     GetBasicDuration();
     std::string u8Str{};
     hRes = U16ToU8(testU16, u8Str);
     duration = GetBasicDuration();
-    std::cout << "U16ToU8"
+    distribution = std::uniform_int_distribution<size_t>{0, u8Str.length()};
+    randElem8 = u8Str.at(distribution(generator));
+    std::cout << "U16ToU8" << "\n random character " << gsl::narrow_cast<int>(gsl::narrow_cast<unsigned char>(randElem8))
               << "\n HRESULT " << hRes << "\n length " << u8Str.length() << "\n elapsed " << duration << "\n~~~~~" << std::endl;
 
     std::cout << "\n*** UTF-8 To UTF-16 ***\n"
@@ -86,23 +98,29 @@ int main()
     std::unique_ptr<wchar_t[]> u16Buffer{ std::make_unique<wchar_t[]>(u8Str.length()) };
     length = MultiByteToWideChar(65001, 0, u8Str.c_str(), gsl::narrow_cast<int>(u8Str.length()), u16Buffer.get(), gsl::narrow_cast<int>(u8Str.length()));
     duration = GetBasicDuration();
+    distribution = std::uniform_int_distribution<size_t>{0, gsl::narrow_cast<size_t>(length)};
+    [[gsl::suppress(26446)]] randElem16 = u16Buffer[distribution(generator)];
     u16Buffer.reset();
-    std::cout << "MultiByteToWideChar"
+    std::cout << "MultiByteToWideChar" << "\n random character " << gsl::narrow_cast<int>(randElem16)
               << "\n length " << length << "\n elapsed " << duration << "\n~~~~~" << std::endl;
 
     GetBasicDuration();
     std::unique_ptr<wchar_t[]> u16Buffer2{ std::make_unique<wchar_t[]>(u8Str.length()) };
     status = p_RtlUTF8ToUnicodeN(u16Buffer2.get(), gsl::narrow_cast<ULONG>(u8Str.length() * sizeof(wchar_t)), &written, u8Str.c_str(), gsl::narrow_cast<ULONG>(u8Str.length()));
     duration = GetBasicDuration();
+    distribution = std::uniform_int_distribution<size_t>{0, gsl::narrow_cast<size_t>(written / sizeof(wchar_t))};
+    [[gsl::suppress(26446)]] randElem16 = u16Buffer2[distribution(generator)];
     u16Buffer2.reset();
-    std::cout << "RtlUTF8ToUnicodeN"
+    std::cout << "RtlUTF8ToUnicodeN" << "\n random character " << gsl::narrow_cast<int>(randElem16)
               << "\n NTSTATUS " << status << "\n length " << (written / sizeof(wchar_t)) << "\n elapsed " << duration << "\n~~~~~" << std::endl;
 
     GetBasicDuration();
     std::wstring u16Str{};
     hRes = U8ToU16(u8Str, u16Str);
     duration = GetBasicDuration();
-    std::cout << "U8ToU16"
+    distribution = std::uniform_int_distribution<size_t>{0, u16Str.length()};
+    randElem16 = u16Str.at(distribution(generator));
+    std::cout << "U8ToU16"<< "\n random character " << gsl::narrow_cast<int>(randElem16)
               << "\n HRESULT " << hRes << "\n length " << u16Str.length() << "\n elapsed " << duration << "\n~~~~~" << std::endl;
 
     std::cout.setf(std::ios::hex, std::ios::basefield);
